@@ -1,0 +1,45 @@
+version: "3.8"
+
+networks:
+  database:
+    name: shared_postgresql_network
+    external: true
+
+services:
+  gitea:
+    user: "1000"
+    image: gitea/gitea:latest-rootless
+    container_name: gitea
+    restart: always
+    volumes:
+      - /mnt/md0/volumes/gitea/var/lib/gitea:/var/lib/gitea
+      - /mnt/md0/volumes/gitea/etc/gitea:/etc/gitea
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gitea.rule=Host(`gitea.rileymathews.com`)
+      - traefik.http.routers.gitea.tls.certresolver=le
+      - traefik.http.services.gitea-gitea.loadbalancer.server.port=3000
+      - traefik.tcp.routers.gitea-ssh.rule=HostSNI(`*`)
+      - traefik.tcp.routers.gitea-ssh.entrypoints=gitea_ssh
+      - traefik.tcp.routers.gitea-ssh.service=gitea-ssh-svc
+      - traefik.tcp.services.gitea-ssh-svc.loadbalancer.server.port=222
+    env_file:
+      - .env.secret
+      - .env
+    networks:
+      - database
+
+  # runner:
+  #   image: gitea/act_runner:latest
+  #   environment:
+  #     CONFIG_FILE: /config.yaml
+  #     GITEA_INSTANCE_URL: https://gitea.rileymathews.com
+  #     GITEA_RUNNER_NAME: action_runner
+  #   env_file:
+  #     - .env.secret
+  #   volumes:
+  #     - /mnt/md0/volumes/gitea/runner/config.yaml:/config.yaml
+  #     - /mnt/md0/volumes/gitea/runner/data:/data
+  #     - /var/run/docker.sock:/var/run/docker.sock
