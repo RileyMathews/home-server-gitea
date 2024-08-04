@@ -12,24 +12,30 @@ services:
     container_name: gitea
     restart: always
     volumes:
-      - /mnt/md0/volumes/gitea/var/lib/gitea:/var/lib/gitea
-      - /mnt/md0/volumes/gitea/etc/gitea:/etc/gitea
+      - ./var/lib/gitea:/var/lib/gitea
+      - ./etc/gitea:/etc/gitea
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     labels:
       - traefik.enable=true
       - traefik.http.routers.gitea.rule=Host(`gitea.rileymathews.com`)
-      - traefik.http.routers.gitea.tls.certresolver=le
+      - traefik.http.routers.gitea.tls.certresolver=cf
       - traefik.http.services.gitea-gitea.loadbalancer.server.port=3000
       - traefik.tcp.routers.gitea-ssh.rule=HostSNI(`*`)
       - traefik.tcp.routers.gitea-ssh.entrypoints=gitea_ssh
       - traefik.tcp.routers.gitea-ssh.service=gitea-ssh-svc
-      - traefik.tcp.services.gitea-ssh-svc.loadbalancer.server.port=222
+      - traefik.tcp.services.gitea-ssh-svc.loadbalancer.server.port=2222
     env_file:
       - .env.secret
-      - .env
-    networks:
-      - database
+  
+  postgres:
+    image: postgres:16.1-bookworm
+    restart: unless-stopped
+    env_file:
+      - .env.secret
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
 
   # runner:
   #   image: gitea/act_runner:latest
@@ -43,3 +49,6 @@ services:
   #     - /mnt/md0/volumes/gitea/runner/config.yaml:/config.yaml
   #     - /mnt/md0/volumes/gitea/runner/data:/data
   #     - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  pg_data:
